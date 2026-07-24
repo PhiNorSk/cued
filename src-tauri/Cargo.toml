@@ -1,0 +1,51 @@
+[package]
+name = "cued"
+version = "1.0.0"
+description = "Cued — per-song start/skip presets for Spotify"
+authors = ["cued"]
+edition = "2021"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "cued_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon: menu-bar/tray mode (M5); image-png/image-ico: decode the embedded
+# tray icon assets (template PNG on macOS, .ico on Windows)
+tauri = { version = "2", features = ["tray-icon", "image-png", "image-ico"] }
+# focuses the running instance instead of starting Cued twice
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# opens the OAuth authorize URL in the system browser (never the webview)
+tauri-plugin-opener = "2"
+# OS keychain storage for OAuth tokens (macOS Keychain / Windows Credential Manager)
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
+# HTTPS client for the code->token exchange and Spotify Web API; rustls avoids a system OpenSSL dependency
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+# typed error enums per the engineering rules (no unwrap/expect on fallible paths)
+thiserror = "2"
+# PKCE S256: SHA-256 of the code_verifier, base64url-encoded
+sha2 = "0.10"
+base64 = "0.22"
+# OS CSPRNG for code_verifier and state
+getrandom = "0.3"
+# safe URL construction/parsing (authorize URL, loopback callback query)
+url = "2"
+# async sleep + wake signal for the playback poll loop; already in the tree
+# via tauri/reqwest, so this adds no new compiled code
+tokio = { version = "1", features = ["time", "sync"] }
+# local preset storage; "bundled" compiles SQLite from source so macOS and
+# Windows ship the exact same engine with no system dependency.
+# 0.40 = latest stable on crates.io at the time of adding (2026-07).
+rusqlite = { version = "0.40", features = ["bundled"] }
+
+[dev-dependencies]
+# #[tokio::test] with paused time for deterministic sleep/backoff tests
+tokio = { version = "1", features = ["macros", "rt", "time", "sync", "test-util"] }

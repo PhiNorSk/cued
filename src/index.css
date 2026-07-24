@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+:root {
+  --ground: #0c0f0d;
+  --surface: #141815;
+  --surface-2: #1b211d;
+  --hairline: #2a332d;
+  --text: #eaf0ec;
+  --text-mut: #8b978f;
+  --accent: #3e8e6e;
+  --accent-hi: #4fa684;
+  --amber: #c9915b;
+  /* M11 timeline strip fill — a deliberately abstract, uniform surface (the
+     fake waveform rides on top). Kept as a token so the strip derives from
+     the same palette as everything else. */
+  --strip: rgba(255, 255, 255, 0.04);
+  /* Skip-density peak color (dark red). The heatmap tints the grey waveform
+     from --text-mut toward this. Mirrored numerically in src/lib/heatmap.ts
+     (HEAT_RGB) because the per-bar color is interpolated in JS. */
+  --heat: #a83f30;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--hairline);
+  --color-text: var(--text);
+  --color-text-mut: var(--text-mut);
+  --color-accent: var(--accent);
+  --color-accent-hi: var(--accent-hi);
+  --color-amber: var(--amber);
+  --color-strip: var(--strip);
+  --color-heat: var(--heat);
+  --font-sans: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--ground);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* native-app feel: no text selection or i-beam cursor */
+  user-select: none;
+  cursor: default;
+}
+
+/* M6 micro-transitions: ≤200 ms, opacity/translate only. Applied to content
+   that appears or swaps (wizard steps, tab panes, confirmations). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anim-rise-in {
+  animation: rise-in 180ms ease-out both;
+}
+
+/* M10 suggestion card: a single quiet fade-in, opacity only — no motion, no
+   pulse. It appears; it never draws attention to itself. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.anim-fade-in {
+  animation: fade-in 200ms ease-out both;
+}
+
+/* Now-playing eyebrow EQ bars. Each bar's height/delay/duration comes from
+   the component so the trio looks organic rather than synchronized. */
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.eq-bar {
+  animation: eq-bounce 1.1s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* M11 "Studio Bracket" timeline micro-interactions. All motion is ≤200 ms and
+   transform/opacity only; the sole exception is the drag handle's position,
+   which by nature animates `left` — kept to 90 ms so snapping to whole seconds
+   glides the last pixels instead of teleporting. Everything here is disabled
+   under prefers-reduced-motion below. */
+.tl-cap {
+  transition: left 90ms ease-out;
+}
+
+/* The colored knob inside a cap scales on hover/grab (transform only). Kept
+   separate from the cap's static -translate-x-1/2 centering so reduced motion
+   can cancel the scale without disturbing the layout transform. */
+.tl-cap-knob {
+  transition:
+    transform 120ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.tl-glow {
+  transition: opacity 120ms ease-out;
+}
+
+/* A single, gentle opacity pulse of the active zone when a handle is released. */
+@keyframes zone-pulse {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.14;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.anim-zone-pulse {
+  animation: zone-pulse 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise-in,
+  .anim-fade-in,
+  .eq-bar,
+  .anim-zone-pulse {
+    /* static bars / instant swaps instead of motion */
+    animation: none;
+  }
+  .tl-cap,
+  .tl-cap-knob,
+  .tl-glow {
+    transition: none;
+  }
+  /* Cancel the hover/grab scale (the knob carries no layout transform). */
+  .tl-cap-knob {
+    transform: none !important;
+  }
+}
