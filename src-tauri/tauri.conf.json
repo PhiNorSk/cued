@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "Cued",
+        "visible": false,
         "width": 900,
         "height": 640,
         "minWidth": 720,

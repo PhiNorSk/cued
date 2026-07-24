@@ -82,6 +82,11 @@ export const settingsCopy = {
   // Shown ONCE here, never on every card.
   provenance:
     "Based on your listening on this device. Nothing leaves your computer.",
+  // M14 launch at login (opt-in, default off).
+  startupHeading: "Startup",
+  autostartLabel: "Start Cued at login",
+  autostartBlurb:
+    "Cued starts quietly in the menu bar when you log in — no window opens until you ask for it.",
   // Voluntary tip-jar link (M13). A quiet footer row — never a banner, a
   // nag, or a feature gate.
   supportLabel: "Support Cued ♥",

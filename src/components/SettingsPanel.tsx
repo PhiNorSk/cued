@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAutostart } from "../hooks/useAutostart";
 import { useInsights } from "../hooks/useInsights";
 import { openSupportPage } from "../lib/appInfo";
 import { cn } from "../lib/cn";
@@ -30,6 +31,7 @@ const TOGGLES_ON: SuggestionToggles = {
 
 export function SettingsPanel({ version, onClose }: SettingsPanelProps) {
   const insights = useInsights();
+  const autostart = useAutostart();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [supportError, setSupportError] = useState<string | null>(null);
   const [toggles, setToggles] = useState<SuggestionToggles>(TOGGLES_ON);
@@ -230,6 +232,28 @@ export function SettingsPanel({ version, onClose }: SettingsPanelProps) {
           <p className="mt-3 text-xs leading-relaxed text-text-mut">
             {settingsCopy.provenance}
           </p>
+        </section>
+
+        <section className="mt-6 border-t border-hairline pt-5">
+          <h3 className="text-sm font-medium text-text">
+            {settingsCopy.startupHeading}
+          </h3>
+          <div className="mt-3">
+            <ToggleRow
+              label={settingsCopy.autostartLabel}
+              checked={autostart.enabled}
+              disabled={!autostart.ready}
+              onChange={autostart.setEnabled}
+            />
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-text-mut">
+            {settingsCopy.autostartBlurb}
+          </p>
+          {autostart.error && (
+            <p role="alert" className="mt-2 text-xs text-amber">
+              {autostart.error}
+            </p>
+          )}
         </section>
 
         <div className="mt-6 flex items-center justify-center gap-2 border-t border-hairline pt-3 text-[11px] text-text-mut">

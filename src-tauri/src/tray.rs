@@ -15,6 +15,21 @@ pub const NOW_PLAYING_MAX_CHARS: usize = 40;
 /// Menu line while nothing displayable is playing.
 pub const NOTHING_PLAYING: &str = "Nothing playing";
 
+/// Launch flag the login item passes (M14) so Cued starts into the tray.
+/// Baked into the LaunchAgent at enable time — keep it stable, or stale
+/// login items created by older builds stop being recognized.
+pub const AUTOSTART_ARG: &str = "--autostart";
+
+/// Whether this launch came from the login item (exact [`AUTOSTART_ARG`]
+/// match anywhere in the args). Pure so the flag rule is unit-tested.
+pub fn is_autostart_launch<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    args.into_iter().any(|a| a.as_ref() == AUTOSTART_ARG)
+}
+
 /// What the tray menu should display; computed from playback + toggle state
 /// so both update paths (poll events, toggle changes) share one mapping.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,6 +241,27 @@ pub fn show_main_window(app: &AppHandle) {
     nudge_engine(app);
 }
 
+/// Decide the initial window state once in setup (M14). The window is
+/// created hidden (tauri.conf.json `visible: false`) so a login-item launch
+/// never flashes it: [`AUTOSTART_ARG`] keeps Cued in the tray, every other
+/// launch shows the window as before.
+pub fn apply_launch_visibility(app: &AppHandle) {
+    if is_autostart_launch(std::env::args()) {
+        hide_to_tray(app);
+        return;
+    }
+    match app.get_webview_window(MAIN_WINDOW) {
+        Some(window) => {
+            for (what, result) in [("show", window.show()), ("focus", window.set_focus())] {
+                if let Err(e) = result {
+                    eprintln!("cued: cannot {what} the main window at launch: {e}");
+                }
+            }
+        }
+        None => eprintln!("cued: main window not found"),
+    }
+}
+
 /// Hide the window into the tray (the engine is untouched); on macOS the
 /// Dock icon disappears with it.
 pub fn hide_to_tray(app: &AppHandle) {
@@ -341,6 +377,34 @@ mod tests {
         let title = "x".repeat(NOW_PLAYING_MAX_CHARS);
         let line = now_playing_line(Some((title.as_str(), &[])));
         assert_eq!(line, title);
+    }
+
+    // -- is_autostart_launch (M14 login-item launch flag) --------------------
+
+    #[test]
+    fn autostart_flag_is_detected_among_other_args() {
+        assert!(is_autostart_launch(["/usr/bin/cued", "--autostart"]));
+        assert!(is_autostart_launch([
+            "cued",
+            "--other",
+            "--autostart",
+            "-v"
+        ]));
+    }
+
+    #[test]
+    fn no_flag_means_a_normal_launch() {
+        assert!(!is_autostart_launch(["/usr/bin/cued"]));
+        assert!(!is_autostart_launch(Vec::<String>::new()));
+    }
+
+    #[test]
+    fn similar_but_different_args_do_not_count() {
+        assert!(!is_autostart_launch([
+            "--autostart=1",
+            "--auto",
+            "autostart"
+        ]));
     }
 
     // -- menu_model (toggle-sync state mapping) ------------------------------

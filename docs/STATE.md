@@ -1,6 +1,11 @@
 # STATE — Cued (handoff between tickets)
 
-Updated after: **M13 — Donations + release preparation, v1.0.0** (2026-07-24).
+Updated after: **M14 — Optional launch at login** (2026-07-24).
+M14 adds an opt-in "Start Cued at login" toggle in Settings (default OFF,
+registered only by the explicit user action) via `tauri-plugin-autostart`
+2.5.1; a login launch starts silently into the tray (M5 accessory mode),
+and the toggle reads the live OS state on every settings open.
+Previous milestone: **M13 — Donations + release preparation, v1.0.0** (2026-07-24).
 M13 makes the repo public-ready: MIT LICENSE (Phil Skribbe), CHANGELOG.md
 (Keep a Changelog, single 1.0.0 entry), `.github/FUNDING.yml` (ko_fi),
 public product README (dev docs moved to `docs/DEVELOPMENT.md`), a quiet
@@ -15,6 +20,41 @@ Cued icon and brands the DMG installer window. First testable DMG exists
 (unsigned — testers right-click → Open).
 
 ## Built so far
+- M14 launch at login (opt-in):
+  - Dependency: `tauri-plugin-autostart` **2.5.1** (Rust crate ONLY — no npm
+    guest bindings, no capability change; the frontend goes through our own
+    commands like every other toggle, same discipline as the opener).
+    Registered in `lib.rs` with `MacosLauncher::LaunchAgent` + the
+    `--autostart` launch arg (`tray::AUTOSTART_ARG`).
+  - LaunchAgent (not AppleScript) BY DECISION: only the LaunchAgent path can
+    pass launch args (required for the silent tray start — AppleScript login
+    items cannot) and it needs no Automation/TCC consent prompt. Enable
+    writes `~/Library/LaunchAgents/Cued.plist` (name = productName); on
+    macOS 13+ the entry appears in System Settings > General > Login Items
+    under **"Allow in the Background"**, not in the "Open at Login" list.
+  - `is_enabled` = plist existence (auto-launch crate, verified in source).
+    Deleting the entry outside Cued IS reflected on the next settings open;
+    flipping the System-Settings background-item switch OFF is NOT (launchd
+    honors the switch but the plist stays, so Cued's toggle still reads on).
+    Known upstream limitation — accepted and documented, don't chase it.
+  - Silent login start: the main window is now created HIDDEN
+    (`"visible": false` in tauri.conf.json) and `tray::apply_launch_visibility`
+    (called last in setup) decides: normal launch → show + focus (pre-M14
+    behavior); `--autostart` present → `hide_to_tray` (Accessory policy, no
+    window, engine untouched). Config windows are created BEFORE the setup
+    hook runs (verified in tauri 2.11.5 source), so the lookup is safe. The
+    single-instance callback also skips `show_main_window` when the second
+    launch carries `--autostart` (a login-item relaunch never pops a window).
+  - Commands `get_autostart_enabled` / `set_autostart_enabled` in
+    `commands.rs` (via `ManagerExt::autolaunch()`; errors map to
+    `AuthError::Config` → `{code, message}` like everything else). The state
+    deliberately does NOT live in config.json — the OS is the single source
+    of truth, queried live. TS: wrapper `src/lib/autostart.ts`, hook
+    `src/hooks/useAutostart.ts` (reads the real state on every panel mount =
+    every settings open; optimistic set with rollback + inline error),
+    "Startup" section in `SettingsPanel.tsx`, strings in `settingsCopy`.
+  - Pure `tray::is_autostart_launch` (exact-match flag detection) is
+    unit-tested (3 new cargo tests → 204 total).
 - M13 donations + release prep (v1.0.0):
   - Support link: new Rust command `open_support_page` in `commands.rs`
     (fixed `SUPPORT_URL` = `https://ko-fi.com/phinorsk` through the
@@ -679,6 +719,17 @@ Cued icon and brands the DMG installer window. First testable DMG exists
   config cache (`lookup_track_config`) stays correct.
 
 ## Gotchas
+- M14: keep `tray::AUTOSTART_ARG` (`--autostart`) stable — it is baked into
+  every existing user's LaunchAgent plist at enable time; renaming it makes
+  those login items launch with the window visible again.
+- M14: enabling autostart from a DEV build writes the dev binary's path
+  (`target/debug/cued`) into the plist — manual login-item testing only makes
+  sense with an installed .app build. Remember to toggle it off after testing
+  a throwaway build, or delete `~/Library/LaunchAgents/Cued.plist`.
+- M14: the window is created hidden and shown by `apply_launch_visibility`
+  in setup. Any future second window / splash must account for that, and
+  removing `"visible": false` from tauri.conf.json would re-introduce a
+  window flash on login launches.
 - M11: a `filter: blur()` layer on a fast-MOVING element (the drag caps) leaves
   ghost trails in WebKit. The cap glow therefore uses a `radial-gradient`
   background (no filter), not `blur-md`. Avoid filter blur on anything dragged.
@@ -709,7 +760,8 @@ The MVP (M0–M6) is feature-complete: auth wizard, playback view, presets +
 Library, auto-skip engine, tray mode, polish + strict CSP. Known post-MVP
 items, in no particular order:
 - Custom tray popover from the mockup (M5 shipped the native menu only).
-- Launch at login; system notifications; global keyboard shortcuts.
+- System notifications; global keyboard shortcuts (launch at login shipped
+  in M14).
 - i18n — all user-facing strings already live in `src/lib/copy.ts` /
   `errorCopy.ts`, so this is extraction, not a rewrite.
 - Fade-out skip; preset export/import.

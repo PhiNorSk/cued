@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::config::SuggestionToggles;
@@ -453,6 +454,30 @@ pub async fn ui_seek(state: State<'_, AppState>, position_ms: u64) -> Result<(),
 #[tauri::command]
 pub async fn get_preset_db_health(db: State<'_, PresetDb>) -> Result<PresetDbHealth, PresetError> {
     Ok(db.health())
+}
+
+/// Whether Cued is registered as an OS login item (M14). Queried live from
+/// the OS — not a stored preference — so the settings toggle reflects the
+/// actual state each time the panel opens (e.g. after the user removed the
+/// entry outside of Cued).
+#[tauri::command]
+pub async fn get_autostart_enabled(app: AppHandle) -> Result<bool, AuthError> {
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|e| AuthError::Config(format!("cannot read the login-item state: {e}")))
+}
+
+/// Register (or remove) Cued as an OS login item (M14). Reached only from
+/// the explicit settings toggle — autostart is opt-in, never a default.
+#[tauri::command]
+pub async fn set_autostart_enabled(app: AppHandle, enabled: bool) -> Result<(), AuthError> {
+    let autostart = app.autolaunch();
+    let result = if enabled {
+        autostart.enable()
+    } else {
+        autostart.disable()
+    };
+    result.map_err(|e| AuthError::Config(format!("cannot update the login item: {e}")))
 }
 
 /// Whether listening-insights collection is enabled (persisted in config.json).

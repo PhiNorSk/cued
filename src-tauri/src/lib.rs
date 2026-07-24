@@ -18,11 +18,21 @@ pub fn run() {
     use tauri::Manager;
     tauri::Builder::default()
         // Must be registered first: a second launch focuses this instance
-        // instead of starting twice.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            tray::show_main_window(app);
+        // instead of starting twice — unless it is a login-item relaunch,
+        // which must never pop the window (M14).
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if !tray::is_autostart_launch(args) {
+                tray::show_main_window(app);
+            }
         }))
         .plugin(tauri_plugin_opener::init())
+        // M14 "Start at login": registration happens only through the
+        // settings toggle (opt-in, never by default). The flag makes a
+        // login launch start into the tray instead of opening the window.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![tray::AUTOSTART_ARG]),
+        ))
         .setup(|app| {
             app.manage(commands::AppState::new()?);
             // Never aborts startup: an unopenable preset DB degrades to
@@ -44,6 +54,9 @@ pub fn run() {
             app.manage(insights::spawn(app.handle()));
             // After the toggle is applied — the tray checkbox mirrors it.
             tray::init(app.handle())?;
+            // Last: the window is created hidden; show it now unless this
+            // is a login-item launch, which stays in the tray (M14).
+            tray::apply_launch_visibility(app.handle());
             Ok(())
         })
         // Closing the window hides Cued into the tray; the engine runs on.
@@ -71,6 +84,8 @@ pub fn run() {
             commands::set_automation_enabled,
             commands::set_edit_mode,
             commands::ui_seek,
+            commands::get_autostart_enabled,
+            commands::set_autostart_enabled,
             commands::get_insights_enabled,
             commands::set_insights_enabled,
             commands::get_insights_count,

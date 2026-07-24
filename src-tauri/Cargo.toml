@@ -21,6 +21,9 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon", "image-png", "image-ico"] }
 # focuses the running instance instead of starting Cued twice
 tauri-plugin-single-instance = "2"
+# opt-in "Start at login" (M14); registers/removes the OS login item.
+# 2.5.1 = latest stable on crates.io at the time of adding (2026-07).
+tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # opens the OAuth authorize URL in the system browser (never the webview)
