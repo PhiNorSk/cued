@@ -26,13 +26,14 @@ no interference with how you listen.
   skip, so you can see your own habits at a glance.
 - **Library** — every preset in one searchable list, editable inline.
 - **Menu-bar app** — close the window and Cued keeps working quietly from
-  the menu bar.
+  the menu bar (macOS) or system tray (Windows).
 - **Private by design** — presets and listening history live only on your
   computer. Nothing is uploaded, ever, and you can delete it all in Settings.
 
 ## Requirements
 
-> - **macOS 13 or newer**
+> - **macOS 13 or newer**, or **Windows 10/11** (Windows support is beta —
+>   please report issues)
 > - **Spotify Premium** — Spotify only allows playback control on Premium
 >   accounts; Cued cannot work around that.
 > - **A free Spotify Client ID** — your personal API key. The in-app wizard
@@ -40,14 +41,30 @@ no interference with how you listen.
 
 ## Install
 
+### macOS
+
 1. Download the latest `.dmg` from the
-   [Releases](../../releases) page.
+   [Releases](../../releases) page (Apple Silicon).
 2. Open it and drag **Cued** into **Applications**.
 3. First launch only: **right-click `Cued.app` → Open → Open**. The build is
    not yet notarized with Apple, so macOS asks once; after that it opens
    normally.
 4. Follow the in-app setup — Cued guides you through connecting your Spotify
    account step by step.
+
+### Windows (beta)
+
+1. Download the latest `.msi` (or the `-setup.exe`) from the
+   [Releases](../../releases) page.
+2. Run the installer. First launch only: Windows SmartScreen warns because
+   the build is not yet code-signed — click **More info → Run anyway**.
+3. Follow the in-app setup — Cued guides you through connecting your Spotify
+   account step by step.
+
+> **Windows is beta.** It is built and checked automatically, but has not
+> had the same hands-on testing as macOS yet. If anything misbehaves —
+> setup, sign-in, the tray icon — please
+> [open an issue](../../issues); it genuinely helps.
 
 ## FAQ
 

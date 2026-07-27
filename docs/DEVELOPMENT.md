@@ -72,6 +72,27 @@ a planned follow-up). macOS Gatekeeper blocks a plain double-click on first
 launch: right-click `Cued.app` → Open → Open once; after that it opens
 normally.
 
+## Releasing
+
+Releases are built by CI (`.github/workflows/release.yml`), not locally:
+
+1. Bump the version in `package.json`, `src-tauri/tauri.conf.json` and
+   `src-tauri/Cargo.toml` (let npm/cargo sync the lockfiles).
+2. Commit, then tag and push:
+
+   ```sh
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+3. GitHub Actions builds on macOS (Apple Silicon `.dmg`) and Windows
+   (`.msi` + NSIS setup `.exe`), running typecheck/lint/tests/clippy/fmt
+   first, and attaches everything to a **draft** GitHub Release for the tag.
+4. Review the draft on the Releases page, edit notes, and publish manually.
+
+Both installers are currently unsigned. Signing secrets can be added to the
+`tauri-action` step's `env` block later without restructuring the workflow.
+
 ## Structure
 
 ```

@@ -1,0 +1,112 @@
+# Release CI — pushing a tag matching `v*` builds UNSIGNED installers for
+# macOS (Apple Silicon .dmg) and Windows (.msi + NSIS setup .exe) and attaches
+# them to a DRAFT GitHub Release for that tag. A human reviews and publishes.
+#
+# Signing is a planned follow-up: add the certificate secrets to the
+# tauri-action `env` block below (APPLE_CERTIFICATE / APPLE_ID / … for macOS
+# notarization, WINDOWS_CERTIFICATE / … for Authenticode) — no structural
+# change needed. Until then, no step references any secret other than the
+# built-in GITHUB_TOKEN, so this workflow succeeds on a repo with zero
+# configured secrets.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the draft release + upload installers to it
+
+jobs:
+  # The draft release is created ONCE here; the platform builds only upload
+  # to it (via releaseId). Letting both matrix jobs create the release for
+  # the same tag races and can produce duplicate drafts.
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - name: Create draft release
+        id: create
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > notes.md <<'EOF'
+          Unsigned builds — first-launch notes:
+
+          **macOS (Apple Silicon):** download the `.dmg`, drag **Cued** into
+          **Applications**, then right-click `Cued.app` → **Open** → **Open**
+          (needed once; the app is not notarized yet).
+
+          **Windows (beta):** download the `.msi` (or the `-setup.exe`) and run
+          it. SmartScreen warns because the installer is unsigned: click
+          **More info → Run anyway**. Windows support is new and lightly
+          tested — please report issues.
+          EOF
+          # Idempotent so a re-run of a failed workflow reuses the draft.
+          if ! gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --draft \
+              --title "Cued $TAG" --notes-file notes.md
+          fi
+          release_id="$(gh release view "$TAG" --repo "$REPO" --json databaseId --jq .databaseId)"
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false # a Windows failure must not cancel the macOS build
+      matrix:
+        platform:
+          # macos-latest runners are arm64, so the default host target is
+          # aarch64-apple-darwin — the same Apple Silicon .dmg as the manual
+          # local build.
+          - macos-latest
+          # windows-latest is x64; bundle.targets "all" yields WiX .msi +
+          # NSIS setup .exe.
+          - windows-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install stable Rust
+        run: rustup update --no-self-update stable && rustup default stable
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Quality gates — any red check fails the job, so a broken build never
+      # reaches the release. One command per step: on windows-latest (pwsh)
+      # a multi-line `run` only propagates the LAST command's exit code.
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Frontend tests
+        run: npm test
+      - name: Rust format check
+        working-directory: src-tauri
+        run: cargo fmt --check
+      - name: Rust clippy
+        working-directory: src-tauri
+        run: cargo clippy -- -D warnings
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Build and upload installers
+        uses: tauri-apps/tauri-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Future signing secrets go here (see header comment).
+        with:
+          releaseId: ${{ needs.create-release.outputs.release-id }}
+          # No updater is configured, so don't generate/upload latest.json.
+          uploadUpdaterJson: false

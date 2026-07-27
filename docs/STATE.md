@@ -1,6 +1,11 @@
 # STATE — Cued (handoff between tickets)
 
-Updated after: **M14 — Optional launch at login** (2026-07-24).
+Updated after: **M15 — Release CI (macOS + Windows)** (2026-07-24).
+M15 adds `.github/workflows/release.yml`: pushing a tag `v*` builds UNSIGNED
+installers on GitHub runners — macOS `.dmg` (Apple Silicon) + Windows `.msi`
+and NSIS setup `.exe` — and attaches them to a DRAFT GitHub Release the human
+reviews and publishes. CI + docs only, zero product-code changes.
+Previous milestone: **M14 — Optional launch at login** (2026-07-24).
 M14 adds an opt-in "Start Cued at login" toggle in Settings (default OFF,
 registered only by the explicit user action) via `tauri-plugin-autostart`
 2.5.1; a login launch starts silently into the tray (M5 accessory mode),
@@ -20,6 +25,48 @@ Cued icon and brands the DMG installer window. First testable DMG exists
 (unsigned — testers right-click → Open).
 
 ## Built so far
+- M15 release CI (`.github/workflows/release.yml` + README/DEVELOPMENT docs):
+  - Trigger: push of a tag matching `v*`. Flow: a `create-release` job
+    (ubuntu, plain `gh` CLI, idempotent on re-runs) creates ONE draft
+    release for the tag and outputs its id; a `build` matrix job
+    (macos-latest = arm64 → aarch64 `.dmg` like the manual build;
+    windows-latest → `.msi` + NSIS `-setup.exe` via `bundle.targets: "all"`)
+    uploads into that draft via `tauri-action`'s `releaseId` input. The
+    single create job exists BECAUSE two matrix jobs racing to create the
+    same draft can produce duplicates. `fail-fast: false` — a Windows
+    failure never cancels the macOS artifact.
+  - Quality gates run before bundling on BOTH platforms and fail the job:
+    `npm run typecheck`, `lint`, `npm test`, `cargo fmt --check`,
+    `cargo clippy -- -D warnings`, `cargo test`. GOTCHA: they are one
+    command per step ON PURPOSE — on windows-latest (pwsh) a multi-line
+    `run` block only propagates the LAST command's exit code.
+  - Pinned versions (supply-chain rule): `actions/checkout@v7.0.1`,
+    `actions/setup-node@v7.0.0` (Node 22, npm cache),
+    `tauri-apps/tauri-action@v1.0.0` (NOTE: v1 renamed/removed several
+    inputs vs the widely-googled v0 examples — input names were verified
+    against the v1.0.0 action.yml). Rust comes from the runner's rustup
+    (`rustup update stable`), no third-party toolchain action.
+  - UNSIGNED by design; zero repo secrets needed (only the built-in
+    `GITHUB_TOKEN`, `permissions: contents: write`). Future signing
+    secrets go into the tauri-action `env` block — structure stays.
+    `uploadUpdaterJson: false` (no updater configured).
+  - Windows was NEVER built or run anywhere yet (no Windows machine).
+    Pre-checks done this ticket: all platform-specific Rust is properly
+    `#[cfg]`-gated (activation-policy calls, tray click behavior — audited
+    via grep), so no compile blocker is known. A local
+    `cargo check --target x86_64-pc-windows-msvc` was attempted and is NOT
+    feasible on macOS: C-source deps (`ring`, bundled sqlite) need a
+    Windows C toolchain. The first real Windows compile happens in CI.
+  - Windows runtime UNKNOWNS for a follow-up ticket (expected issue areas,
+    none verified): keyring → Credential Manager storage; tray icon +
+    left-click-opens-window behavior; 127.0.0.1:8917 OAuth loopback vs
+    Windows Firewall (may prompt or block the callback); SmartScreen on
+    the unsigned installer (documented in README). File findings here.
+  - README: Requirements now macOS 13+ OR Windows 10/11 (beta); Install
+    split into macOS / Windows (beta) sections with first-launch notes
+    (right-click → Open; SmartScreen More info → Run anyway) + an issue
+    ask. DEVELOPMENT.md gained a "Releasing" section (bump version → tag
+    → push → review draft → publish).
 - M14 launch at login (opt-in):
   - Dependency: `tauri-plugin-autostart` **2.5.1** (Rust crate ONLY — no npm
     guest bindings, no capability change; the frontend goes through our own
@@ -94,7 +141,8 @@ Cued icon and brands the DMG installer window. First testable DMG exists
 - [ ] Real screenshots into `docs/assets/` (hero.png referenced) — HUMAN
 - [ ] Manual test: support link opens Ko-fi, about shows 1.0.0 — HUMAN
 - [ ] Commit, push, publish repo + GitHub Release with the DMG — HUMAN
-- [ ] Post-release backlog: signing/notarization, Windows build
+- [ ] Post-release backlog: signing/notarization (Windows CI build shipped
+      in M15 — runtime verification on real Windows still open)
 
 - M12 packaging (no app-code changes — scripts + config + generated assets):
   - Brand-asset toolchain: `scripts/cued_render.py` is a shared stdlib-only
