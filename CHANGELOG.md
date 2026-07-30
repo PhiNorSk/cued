@@ -5,6 +5,22 @@ All notable changes to Cued are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-30
+
+### Added
+
+- **Homebrew install** — `brew install --cask --no-quarantine phinorsk/tap/cued`.
+- **One-line install script** for macOS — downloads the latest release and
+  installs it without any Gatekeeper prompt (see README → Install).
+
+### Changed
+
+- macOS builds are now ad-hoc signed, so the app bundle is properly sealed
+  and can never report as "damaged". (The build is still not notarized, so a
+  manually downloaded `.dmg` asks for a one-time approval.)
+- First-launch instructions updated for macOS 15 (Sequoia), where
+  right-click → Open no longer bypasses Gatekeeper.
+
 ## [1.0.1] - 2026-07-24
 
 ### Added

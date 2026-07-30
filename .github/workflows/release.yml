@@ -37,9 +37,14 @@ jobs:
           cat > notes.md <<'EOF'
           Unsigned builds — first-launch notes:
 
-          **macOS (Apple Silicon):** download the `.dmg`, drag **Cued** into
-          **Applications**, then right-click `Cued.app` → **Open** → **Open**
-          (needed once; the app is not notarized yet).
+          **macOS (Apple Silicon):** easiest is Homebrew
+          (`brew install --cask --no-quarantine phinorsk/tap/cued`) or the
+          install script — see the README's Install section; both avoid the
+          Gatekeeper prompt entirely. For a manual `.dmg` download, drag
+          **Cued** into **Applications**; on first launch macOS blocks the
+          app once because it is not notarized. On macOS 15 or newer, allow
+          it under **System Settings → Privacy & Security → Open Anyway**;
+          on macOS 13/14, right-click `Cued.app` → **Open** → **Open**.
 
           **Windows (beta):** download the `.msi` (or the `-setup.exe`) and run
           it. SmartScreen warns because the installer is unsigned: click

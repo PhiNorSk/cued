@@ -41,16 +41,43 @@ no interference with how you listen.
 
 ## Install
 
-### macOS
+### macOS (Apple Silicon)
 
-1. Download the latest `.dmg` from the
-   [Releases](../../releases) page (Apple Silicon).
+**Homebrew** — the easiest way if you use it:
+
+```sh
+brew install --cask --no-quarantine phinorsk/tap/cued
+```
+
+`--no-quarantine` skips the Gatekeeper prompt — Cued is open source but not
+notarized with Apple. If you leave the flag off, see the manual steps below
+for the one-time first-launch approval.
+
+**Install script** — no Homebrew needed:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/PhiNorSk/cued/main/install.sh | bash
+```
+
+Downloads the latest release and puts `Cued.app` into Applications. Because
+the download doesn't go through a browser, macOS shows no Gatekeeper prompt.
+([What the script does](install.sh) — it's short and readable.)
+
+**Manual download:**
+
+1. Download the latest `.dmg` from the [Releases](../../releases) page.
 2. Open it and drag **Cued** into **Applications**.
-3. First launch only: **right-click `Cued.app` → Open → Open**. The build is
-   not yet notarized with Apple, so macOS asks once; after that it opens
-   normally.
-4. Follow the in-app setup — Cued guides you through connecting your Spotify
-   account step by step.
+3. First launch only, because the build is not notarized: macOS will block
+   the app once.
+   - **macOS 15 (Sequoia) or newer:** try to open Cued, then go to
+     **System Settings → Privacy & Security**, scroll down, and click
+     **Open Anyway**.
+   - **macOS 13/14:** right-click `Cued.app` → **Open** → **Open**.
+   - Or skip the dialog entirely from a terminal:
+     `xattr -d com.apple.quarantine /Applications/Cued.app`
+
+Then follow the in-app setup — Cued guides you through connecting your
+Spotify account step by step.
 
 ### Windows (beta)
 

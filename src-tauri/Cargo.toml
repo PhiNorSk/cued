@@ -1,6 +1,6 @@
 [package]
 name = "cued"
-version = "1.0.1"
+version = "1.0.2"
 description = "Cued — per-song start/skip presets for Spotify"
 authors = ["cued"]
 edition = "2021"
